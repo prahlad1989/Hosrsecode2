@@ -37,6 +37,10 @@ public class App {
 	
 	private static final String spreadSheetId = ConfigLoader.getString("Spreadsheet_ID");
 	
+	private static final String modelName="NewModel";
+	
+	private static final String indexSheetName="IndexSheet";
+	
 	private static Sheets service;
 	
 	public App() throws IOException, GeneralSecurityException {
@@ -62,7 +66,7 @@ public class App {
 		List<Sheet> sheets = response.getSheets();
 		Sheet modelSheet=null;
 		for(Sheet sheet:sheets) {
-			if(sheet.getProperties().getTitle().equals("NewModel")) {
+			if(sheet.getProperties().getTitle().equals(modelName)) {
 				modelSheet=sheet;
 				break;
 			}
@@ -110,6 +114,7 @@ public class App {
 			if (processedURLs.size() == urls.size()) {
 				break;
 			}
+			List<List<Object>> raceDetailsList = new ArrayList<List<Object>>();
 			
 			for (int i=0; i < urls.size(); i++) {
 				
@@ -120,11 +125,18 @@ public class App {
 					String supposedSheetName=URLParser.getSupposedSheetNameFromURL(url);
 					
 					String range = supposedSheetName + "!A1:C";
-					processURL(url, range);
+					List raceDetails = processURL(url, range);
+					if(raceDetails != null) {
+						raceDetails.add(supposedSheetName);
+						raceDetailsList.add(raceDetails);
+					}
 					//Now do all coloring stuff.
 					AppsScriptQuickstart.callScriptPerTab(supposedSheetName);
 				}
 			}
+			//Now update index with latest race timings etc.
+			String range=indexSheetName+"!A1:D";
+			update(raceDetailsList, range);
 			
 			System.out.println("Sleep in 5 seconds");
 			Thread.sleep(5000);
@@ -143,7 +155,7 @@ private void deleteOldTabs() {
 			
 			for(Sheet sheet:sheets) {
 				
-				if(!sheet.getProperties().getTitle().equals("NewModel")) {
+				if(!sheet.getProperties().getTitle().equals(modelName) && !sheet.getProperties().getTitle().equals(indexSheetName)) {
 					DeleteSheetRequest deleteSheetRequest=new DeleteSheetRequest();
 					deleteSheetRequest.setSheetId(sheet.getProperties().getSheetId());
 					requests.add(new Request().setDeleteSheet(deleteSheetRequest));
@@ -160,7 +172,7 @@ private void deleteOldTabs() {
 		
 	}
 
-	public void processURL(String url, String range) {
+	public List processURL(String url, String range) {
 
 		try {
 			log.info("Process for url: " + url);
@@ -173,13 +185,13 @@ private void deleteOldTabs() {
 			String infoJSON = URLParser.parseURL(infoURL);
 			if (infoJSON == null) {
 				log.error("Can not read infoURL=" + infoURL);
-				return;
+				return null;
 			}
 			
 			String oddsJSON = URLParser.parseURL(oddsURL);
 			if (oddsJSON == null) {
 				log.error("Can not read oddsURL=" + oddsURL);
-				return;
+				return null;
 			}
 			
 			JSONParser jsonParser = new JSONParser();
@@ -194,7 +206,7 @@ private void deleteOldTabs() {
 			if (object == null || object1 == null) {
 				
 				log.error("Empty json");
-				return;
+				return null;
 			}
 			
 			String displayName = (String) object.get("DisplayName");
@@ -203,7 +215,7 @@ private void deleteOldTabs() {
 				log.error("Race is no longer existing");
 				
 				processedURLs.put(url, true);
-				return;
+				return null;
 			}
 			
 			JSONObject mtpInfo = (JSONObject) object1.get("MtpInfo");
@@ -238,7 +250,7 @@ private void deleteOldTabs() {
 			
 			JSONArray jsonArray = (JSONArray) object.get("EntryChanges");
 			
-			if (jsonArray == null) return;
+			if (jsonArray == null) return null;
 			
 			JSONObject winOdds = (JSONObject) object1.get("WinOdds");
 			JSONArray entries = (JSONArray) winOdds.get("Entries");
@@ -276,6 +288,8 @@ private void deleteOldTabs() {
 			}
 
 		    update(values, range);
+		    return row1;
+		    
 		    
 		    
 		    
@@ -284,6 +298,7 @@ private void deleteOldTabs() {
 			e.printStackTrace();
 			log.error(e);
 		}
+		return null;
 	}
 	
 
