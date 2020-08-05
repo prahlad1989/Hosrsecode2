@@ -108,7 +108,7 @@ class AppsScriptQuickstart {
 	public static void callScriptPerTab(String tabName) throws IOException {
 		// ID of the script to call. Acquire this from the Apps Script editor,
 		// under Publish > Deploy as API executable.
-		String scriptId = "1ccQqB6V9Fe2hsfLgeAHa3pBtAGLepO9DBSfW8LUjzkerTXiNCdAv8VXt";
+		String scriptId = "1KyGmb0gMLLhMU9yrNJ6SeBZ7yzI9WM8YuX-ONbdvHD0-BeDKZ_arE-Zt";
 		Script service = getScriptService();
 
 		// Create an execution request object.
@@ -117,6 +117,7 @@ class AppsScriptQuickstart {
 		// {"Copy of ok1 1"}));
 		ExecutionRequest request = new ExecutionRequest().setFunction("colorSpecifiedSheet")
 				.setParameters(Arrays.asList(new Object[] { tabName }));
+		//ExecutionRequest request =new ExecutionRequest().setFunction("myFunction");
 		try {
 			// Make the API request.
 			Operation op = service.scripts().run(scriptId, request).execute();
